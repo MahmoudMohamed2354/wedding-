@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة حلقات القرآن الكريم 
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+    </style>
+    <!-- مكتبات Firebase (الإصدار المتوافق مع ملف HTML المباشر) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- الشريط العلوي -->
+    <header class="bg-emerald-700 text-white shadow-md p-4 sticky top-0 z-50">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold"><i class="fas fa-quran ml-2"></i> إدارة الحلقات (سحابي مباشر)</h1>
+            <div class="flex gap-2">
+                <button onclick="showApp('teacher')" class="bg-emerald-800 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-emerald-900 transition">تطبيق المعلم</button>
+                <button onclick="showApp('admin')" class="bg-slate-800 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-slate-900 transition"><i class="fas fa-lock ml-1"></i> لوحة الإدارة</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto p-4 max-w-4xl">
+
+        <!-- ================= تطبيق المعلم ================= -->
+        <div id="teacherSection" class="space-y-6">
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-emerald-100">
+                <label class="block text-sm font-bold text-emerald-800 mb-2"><i class="fas fa-chalkboard-teacher ml-1"></i> اختر الشيخ / المحفظ:</label>
+                <select id="teacherSelect" onchange="loadTeacherStudents()" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-slate-700 font-semibold">
+                    <option value="">-- اضغط لاختيار المحفظ --</option>
+                    <option value="الشيخ / أحمد عبد الله">الشيخ / أحمد عبد الله</option>
+                    <option value="الشيخ / محمود اسماعيل">الشيخ / محمود اسماعيل</option>
+                </select>
+            </section>
+
+            <div id="teacherContent" class="hidden space-y-6">
+                <section class="bg-white p-4 rounded-xl shadow-sm">
+                    <label class="block text-sm font-semibold text-slate-600 mb-2">اختر الطالب:</label>
+                    <select id="studentSelect" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <option value="أحمد محمد إبراهيم">أحمد محمد إبراهيم</option>
+                        <option value="عمر خالد عبد الله">عمر خالد عبد الله</option>
+                    </select>
+                </section>
+
+                <section class="bg-white p-5 rounded-xl shadow-sm">
+                    <h2 class="text-lg font-bold text-emerald-800 mb-4 border-b pb-2"><i class="fas fa-book-open ml-2"></i> تسجيل التسميع اليومي</h2>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">من سورة / آية</label>
+                            <input type="text" id="fromInput" placeholder="مثال: البقرة (10)" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">إلى سورة / آية</label>
+                            <input type="text" id="toInput" placeholder="مثال: البقرة (25)" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <label class="block text-xs font-semibold text-slate-500 mb-2">التقييم:</label>
+                    <div class="grid grid-cols-4 gap-2 mb-4">
+                        <button type="button" onclick="setEval(this, 'ممتاز')" class="eval-btn p-2.5 border border-emerald-500 text-emerald-700 rounded-lg font-semibold text-sm hover:bg-emerald-50 transition">ممتاز</button>
+                        <button type="button" onclick="setEval(this, 'جيد جداً')" class="eval-btn p-2.5 border border-blue-500 text-blue-700 rounded-lg font-semibold text-sm hover:bg-blue-50 transition">جيد جداً</button>
+                        <button type="button" onclick="setEval(this, 'جيد')" class="eval-btn p-2.5 border border-amber-500 text-amber-700 rounded-lg font-semibold text-sm hover:bg-amber-50 transition">جيد</button>
+                        <button type="button" onclick="setEval(this, 'إعادة')" class="eval-btn p-2.5 border border-rose-500 text-rose-700 rounded-lg font-semibold text-sm hover:bg-rose-50 transition">إعادة</button>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">ملاحظات المعلم</label>
+                        <input type="text" id="notesInput" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm" placeholder="ملاحظات التجويد...">
+                    </div>
+                </section>
+
+                <section class="bg-white p-5 rounded-xl shadow-sm">
+                    <h2 class="text-lg font-bold text-emerald-800 mb-4 border-b pb-2"><i class="fas fa-user-check ml-2"></i> الحالة اليومية</h2>
+                    <div class="flex gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="attendance" value="حاضر" checked> حاضر</label>
+                        <label class="flex items-center gap-2 cursor-pointer"><input type="radio" name="attendance" value="غائب"> غائب</label>
+                    </div>
+                </section>
+
+                <button onclick="saveToFirebase()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3.5 rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+                    <i class="fas fa-save"></i> حفظ وإرسال مباشر للسحاب
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= لوحة تحكم الإدارة ================= -->
+        <div id="adminSection" class="hidden space-y-6">
+            <div id="adminLoginBox" class="bg-white p-8 rounded-xl shadow-md max-w-md mx-auto text-center border border-slate-200">
+                <div class="bg-slate-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-700 text-2xl"><i class="fas fa-user-shield"></i></div>
+                <h2 class="text-xl font-bold text-slate-800 mb-1">تسجيل دخول الإدارة</h2>
+                <div class="space-y-4 text-right mt-4">
+                    <input type="text" id="adminUser" value="admin" class="w-full p-3 border border-slate-300 rounded-lg text-sm bg-slate-50">
+                    <input type="password" id="adminPass" placeholder="كلمة المرور (1234)" class="w-full p-3 border border-slate-300 rounded-lg text-sm">
+                    <button onclick="adminLogin()" class="w-full bg-slate-800 text-white font-bold p-3 rounded-lg shadow">دخول</button>
+                </div>
+            </div>
+
+            <div id="adminDashboard" class="hidden space-y-6">
+                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-emerald-900">لوحة المتابعة السحابية المباشرة</h3>
+                        <p class="text-xs text-emerald-700">تتحدث البيانات لحظياً كلما أضاف المعلم شيئاً جديداً.</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"><i class="fas fa-file-excel"></i> تصدير Excel</button>
+                        <button onclick="logoutAdmin()" class="bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">خروج</button>
+                    </div>
+                </div>
+
+                <!-- جدول عرض السجلات السحابية -->
+                <section class="bg-white p-5 rounded-xl shadow-sm overflow-x-auto">
+                    <h3 class="font-bold text-slate-800 mb-3 border-b pb-2"><i class="fas fa-list ml-1 text-emerald-600"></i> سجلات التسميع الواردة</h3>
+                    <table class="w-full text-right border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 border-b">
+                                <th class="p-3">المحفظ</th>
+                                <th class="p-3">الطالب</th>
+                                <th class="p-3">المقدار</th>
+                                <th class="p-3">التقييم</th>
+                                <th class="p-3">الحالة</th>
+                                <th class="p-3 text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTableBody">
+                            <tr><td colspan="6" class="text-center p-4 text-slate-400">جاري تحميل البيانات من السحاب...</td></tr>
+                        </tbody>
+                    </table>
+                </section>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // إعدادات فايربيس الخاصة بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyCNRDtAzditekwpsFVy1ZwVjMbZLTUldxU",
+            authDomain: "magic-5546b.firebaseapp.com",
+            projectId: "magic-5546b",
+            storageBucket: "magic-5546b.appspot.com",
+            messagingSenderId: "656130877925",
+            appId: "1:656130877925:web:b788b43c417ef555dba70c",
+            measurementId: "G-833DDZYNC8"
+        };
+
+        // تهيئة فايربيس
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const analytics = firebase.analytics();
+
+        let currentEval = "ممتاز";
+        let liveRecords = [];
+
+        function showApp(type) {
+            if(type === 'teacher') {
+                document.getElementById('teacherSection').classList.remove('hidden');
+                document.getElementById('adminSection').classList.add('hidden');
+            } else {
+                document.getElementById('teacherSection').classList.add('hidden');
+                document.getElementById('adminSection').classList.remove('hidden');
+            }
+        }
+
+        function loadTeacherStudents() {
+            let val = document.getElementById('teacherSelect').value;
+            document.getElementById('teacherContent').classList.toggle('hidden', val === "");
+        }
+
+        function setEval(btn, evalText) {
+            document.querySelectorAll('.eval-btn').forEach(b => b.classList.remove('bg-emerald-600', 'bg-blue-600', 'bg-amber-600', 'bg-rose-600', 'text-white'));
+            btn.classList.add('bg-emerald-600', 'text-white');
+            currentEval = evalText;
+        }
+
+        // حفظ البيانات مباشرة إلى قاعدة بيانات فايربيس السحابية (Firestore)
+        function saveToFirebase() {
+            let teacher = document.getElementById('teacherSelect').value;
+            let student = document.getElementById('studentSelect').value;
+            let from = document.getElementById('fromInput').value || "غير محدد";
+            let to = document.getElementById('toInput').value || "غير محدد";
+            let status = document.querySelector('input[name="attendance"]:checked').value;
+
+            db.collection("quran_records").add({
+                teacher: teacher,
+                student: student,
+                fromTo: `من ${from} إلى ${to}`,
+                eval: currentEval,
+                status: status,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+                alert("تم إرسال وحفظ البيانات بنجاح إلى النظام السحابي!");
+                document.getElementById('fromInput').value = "";
+                document.getElementById('toInput').value = "";
+            })
+            .catch((error) => {
+                alert("حدث خطأ أثناء الحفظ: " + error.message);
+            });
+        }
+
+        // استماع فوري للتغييرات من السحاب لعرضها في لوحة المدير
+        function listenToCloudData() {
+            db.collection("quran_records").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                liveRecords = [];
+                snapshot.forEach((doc) => {
+                    liveRecords.push({ id: doc.id, ...doc.data() });
+                });
+                renderTable();
+            });
+        }
+
+        function adminLogin() {
+            if(document.getElementById('adminUser').value === "admin" && document.getElementById('adminPass').value === "1234") {
+                document.getElementById('adminLoginBox').classList.add('hidden');
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                listenToCloudData(); // بدء الاستماع الفوري للبيانات
+            } else {
+                alert("بيانات الدخول غير صحيحة (استخدم admin / 1234)");
+            }
+        }
+
+        function logoutAdmin() {
+            document.getElementById('adminLoginBox').classList.remove('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+        }
+
+        function renderTable() {
+            let tbody = document.getElementById('recordsTableBody');
+            tbody.innerHTML = "";
+            if(liveRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-slate-400">لا توجد سجلات مضافة حتى الآن</td></tr>`;
+                return;
+            }
+            liveRecords.forEach(rec => {
+                tbody.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-3">${rec.teacher}</td>
+                        <td class="p-3 font-semibold">${rec.student}</td>
+                        <td class="p-3 text-xs text-slate-600">${rec.fromTo}</td>
+                        <td class="p-3"><span class="px-2 py-1 bg-emerald-100 text-emerald-800 rounded text-xs">${rec.eval}</span></td>
+                        <td class="p-3">${rec.status}</td>
+                        <td class="p-3 text-center space-x-1 space-x-reverse">
+                            <button onclick="editRecord('${rec.id}', '${rec.eval}')" class="text-blue-600 hover:text-blue-800 text-xs px-2 py-1 bg-blue-50 rounded"><i class="fas fa-edit"></i> تعديل</button>
+                            <button onclick="deleteRecord('${rec.id}')" class="text-rose-600 hover:text-rose-800 text-xs px-2 py-1 bg-rose-50 rounded"><i class="fas fa-trash"></i> حذف</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function deleteRecord(id) {
+            if(confirm("هل أنت متأكد من حذف هذا السجل من السحاب؟")) {
+                db.collection("quran_records").doc(id).delete().catch((error) => {
+                    alert("خطأ في الحذف: " + error.message);
+                });
+            }
+        }
+
+        function editRecord(id, currentVal) {
+            let newEval = prompt("أدخل التقييم الجديد (ممتاز، جيد جداً، جيد، إعادة):", currentVal);
+            if(newEval) {
+                db.collection("quran_records").doc(id).update({
+                    eval: newEval
+                }).catch((error) => {
+                    alert("خطأ في التعديل: " + error.message);
+                });
+            }
+        }
+
+        function exportToExcel() {
+            let html = "<table><tr><th>المحفظ</th><th>الطالب</th><th>المقدار</th><th>التقييم</th><th>الحالة</th></tr>";
+            liveRecords.forEach(r => {
+                html += `<tr><td>${r.teacher}</td><td>${r.student}</td><td>${r.fromTo}</td><td>${r.eval}</td><td>${r.status}</td></tr>`;
+            });
+            html += "</table>";
+            
+            let blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            a.download = 'Quran_Cloud_Records.xls';
+            a.click();
+        }
+    </script>
+</body>
+</html>
